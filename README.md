@@ -1,33 +1,28 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-S2 | ESP32-S3 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- |
 
-# HTTPS Request Example
+### Software Implementation 
 
-Uses APIs from `esp-tls` component to make a very simple HTTPS request over a secure connection, including verifying the server TLS certificate.
+The ESP32S3 is programmed using ESP-IDF development tool. The code is divided in 3 different sections: initialization , threads creation and threads execution. The complete flow diagram of ESP32S3 is shown in Figure 1.
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
 
-### Session Tickets
 
-Session Tickets, specified in [RFC 5077](https://datatracker.ietf.org/doc/html/rfc5077) are a mechanism to distribute encrypted
-session-state information to the client in the form of a ticket and a mechanism to present the ticket back to the server.  The ticket is created by a TLS server and sent to a TLS client.  The TLS client presents the ticket to the TLS server to resume a session. In TLS 1.2, this speeds up handshakes from two to one round-trip.
+The initialization section creates various parameters required for the proper functioning of the master system, such as a list of HTTP requests, threads, and thread parameters (including mutexes, attributes, and thread sizes), as well as port numbers. This section also performs clean-up operations and ensures that the WiFi connection is established correctly.
 
-In ESP-IDF, this feature is supported (for both server and client) when mbedTLS is used as the SSL library.
+Thread initialization section is mainly responsible for creating 4 threads (3 threads for 3 slave nodes and 1 thread for database connection). In the master node, the thread used for establishing a database connection was implemented with a standard thread size, whereas the threads utilized for communication with slave nodes were allocated a larger stack size. This is due to the substantial computational workload and data management requirements of the slave node communication threads in comparison to the database connection thread. Both types of threads are responsible for performing two tasks: the Transmission Control Protocol (TCP) server task, and generating Hypertext Transfer Protocol (HTTP) GET requests to ensure synchronization of the database.
 
-## How to use example
-Before project configuration and build, be sure to set the correct chip target using `idf.py set-target <chip_name>`.
+The TCP server task creates a TCP socket with the specified port number and waits for a connection request from the client. After accepting a request from the client, connection between server and client is established and the application waits for some data to be received from the client. Received data is analyzed and the command is calculated. Once ready, the command is transmitted back to the client.
 
-### Hardware Required
+HTTP GET request function retrieves data from a remote server using the HTTP protocol. The code first creates a specific GET request with the required headers and parameters using the OpenSSL library. The request is then sent to the server, and the response is received and parsed to extract the relevant data. The retrieved data is then printed to the console for further analysis. This approach provides a secure and efficient way to retrieve data from remote servers. This code is used for both pushing data to the database as well as pulling data from it and updating shared buffer.
 
-* A development board with ESP32/ESP32-S2/ESP32-C3 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.)
-* A USB cable for power supply and programming
+In order to maintain data consistency and prevent race conditions, mutexes were implemented as a more robust and reliable multi-threaded mechanism. Specifically, mutexes are important in both the TCP server and HTTP GET request tasks, whenever a thread must request access to the shared buffer before being allowed to modify its contents. 
 
 ### Configure the project
 
 ```
 idf.py menuconfig
 ```
-Open the project configuration menu (`idf.py menuconfig`) to configure Wi-Fi or Ethernet. See "Establishing Wi-Fi or Ethernet Connection" section in [examples/protocols/README.md](../../README.md) for more details.
+Open the project configuration menu (`idf.py menuconfig`) to configure Wi-Fi or Ethernet. See "Establishing Wi-Fi or Ethernet Connection" section in [examples/protocols/README.md](../../README.md) for more details. You can also configure the port numbers for specific slave nodes.
 
 #### Configuring Client Session Tickets
 
@@ -42,50 +37,7 @@ Ensure that the server has the session tickets feature enabled.
 
 Build the project and flash it to the board, then run monitor tool to view serial output:
 
-```
 idf.py -p PORT flash monitor
-```
 
 (Replace PORT with the name of the serial port to use.)
 
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-```
-I (5634) example_connect: - IPv4 address: 192.168.194.219
-I (5634) example_connect: - IPv6 address: fe80:0000:0000:0000:266f:28ff:fe80:2c74, type: ESP_IP6_ADDR_IS_LINK_LOCAL
-I (5644) example: Start https_request example
-I (5654) example: https_request using crt bundle
-W (6514) wifi:<ba-add>idx:1 (ifx:0, ee:6d:19:60:f6:0e), tid:4, ssn:0, winSize:64
-I (7074) esp-x509-crt-bundle: Certificate validated
-I (9384) example: Connection established...
-I (9384) example: 107 bytes written
-I (9384) example: Reading HTTP response...
-HTTP/1.1 200 OK
-Content-Length: 2091
-Access-Control-Allow-Origin: *
-Connection: close
-Content-Type: application/json
-Date: Tue, 07 Sep 2021 08:30:00 GMT
-Strict-Transport-Security: max-age=631138519; includeSubdomains; preload
-
-{"given_cipher_suites":["TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_DHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_AES_256_CCM","TLS_DHE_RSA_WITH_AES_256_CCM","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384","TLS_ECDHE_RSA_WITH_AES_
-256_CBC_SHA384","TLS_DHE_RSA_WITH_AES_256_CBC_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_DHE_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8","TLS_DHE_RSA_WITH_AES_256_CCM_8","TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_DHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CCM","TLS_DHE_RSA_WITH_AES_128_CCM","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256","TLS_DHE
-_RSA_WITH_AES_128_CBC_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_DHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA
-_WITH_AES_128_CCM_8","TLS_DHE_RSA_WITH_AES_128_CCM_8","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_CCM","TLS_RSA_WITH_AES_256_CBC_SHA256","TLS_RSA_WITH_AES_256_CBC_SHA","TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384","TLS_ECDH_RSA_WITH_AES_256_CBC_SHA","TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384","TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA","TLS_RSA_WITH_AES_256_CCM_8","TLS_RSA_WITH_AES_128_GCM_SHA256","TLS_RSA_WITH_AES_128_CCM","TLS_RS
-A_WITH_AES_128_CBC_SHA256","TLS_RSA_WITH_AES_128_CBC_SHA","TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256","TLS_ECDH_RSA_WITH_AES_128_CBC_SHA","TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256","TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA","TLS_RSA_WITH_AES_128_CCM_8","TLS_EMPTY_RENEGOTIATION_INFO_SCSV"],"ephemeral_keys_supported":true,"session_ticket_supported":true,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":fal
-se,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.2","rating":"Probably Okay"}
-I (10204) example: connection closed
-I (10204) example: 10...
-I (11204) example: 9...
-I (12204) example: 8...
-I (13204) example: 7...
-I (14204) example: 6...
-I (15204) example: 5...
-I (16204) example: 4...
-```
-
-# MasterNode
