@@ -1,0 +1,56 @@
+menu "Example Configuration"
+
+    config EXAMPLE_CLIENT_SESSION_TICKETS
+        bool "Enable Client session ticket support"
+        default n
+        select ESP_TLS_CLIENT_SESSION_TICKETS
+        help
+            Enable the client session ticket support for the example.
+
+    config EXAMPLE_LOCAL_SERVER_URL
+        string "Local Server URL for testing session tickets"
+        default "https://192.168.0.106:8070"
+        depends on EXAMPLE_CLIENT_SESSION_TICKETS
+        help
+            The url of the server to which the example is going to connect in order to test the session ticket support.
+
+    config EXAMPLE_LOCAL_SERVER_URL_FROM_STDIN
+        bool
+        default y if EXAMPLE_LOCAL_SERVER_URL = "FROM_STDIN"
+
+
+    config EXAMPLE_IPV4
+        bool "IPV4"
+        default y
+
+    config EXAMPLE_IPV6
+        bool "IPV6"
+        default n
+        select EXAMPLE_CONNECT_IPV6
+
+    config EXAMPLE_PORT
+        int "Port"
+        range 0 65535
+        default 3333
+        help
+            Local port the example server will listen on.
+
+    config EXAMPLE_KEEPALIVE_IDLE
+        int "TCP keep-alive idle time(s)"
+        default 5
+        help
+            Keep-alive idle time. In idle time without receiving any data from peer, will send keep-alive probe packet
+
+    config EXAMPLE_KEEPALIVE_INTERVAL
+        int "TCP keep-alive interval time(s)"
+        default 5
+        help
+            Keep-alive probe packet interval time.
+
+    config EXAMPLE_KEEPALIVE_COUNT
+        int "TCP keep-alive packet retry send counts"
+        default 3
+        help
+            Keep-alive probe packet retry count.
+endmenu
+
