@@ -5,6 +5,7 @@
 
 The ESP32S3 is programmed using ESP-IDF development tool. The code is divided in 3 different sections: initialization , threads creation and threads execution. The complete flow diagram of ESP32S3 is shown in Figure 1.
 
+![Master_node_flow_chart (1)](https://github.com/sulikismaylovv/MasterNode/assets/100700575/c242db7e-f6cf-4f0a-b3c9-49307ca2a509)
 
 
 The initialization section creates various parameters required for the proper functioning of the master system, such as a list of HTTP requests, threads, and thread parameters (including mutexes, attributes, and thread sizes), as well as port numbers. This section also performs clean-up operations and ensures that the WiFi connection is established correctly.
